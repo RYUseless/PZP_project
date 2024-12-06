@@ -1,4 +1,4 @@
-import src.Utils.folder_actions as Ryu_FA
+import src.CPU_single_core.folder_actions as Ryu_FA
 import re
 from operator import itemgetter
 
@@ -13,26 +13,26 @@ class Processing:
         filtered_words = []
         filtered_words_by_stopWords = {}
         filtered_words_sum = {}
-        print("dayum bro, ram goes away")
+        print("\ndayum bro, ram goes away")
         # TODO: perhaps vyřešit issue s SLOVO--SLOVO aka nechává to existovat
         for word in self.data_text:
-            # Odstraní interpunkci na začátku a na konci slova, povolí spojovníky a apostrofy uvnitř slova
+            # odfiltrování znaků co nejsou písmenka, odstranění teček před a za, pokus o odfiltraci i --
             cleaned_word = re.sub(r"^[^\w'-]+|[^\w'-]+$", "", word)
 
-            # Filtrace podle délky slova
+            # Filtrace slov, které jsou menší než 4 charaktery a delší než 8 charakterů
             if 4 <= len(cleaned_word) <= 8:
                 filtered_words.append(cleaned_word)
 
-            # Najít slova z "stopwords.txt" a uchovat je v dictionary
+            # Filtr slov, které jsou identické jako slova z stop_words.txá → akce s něma zatím žádný
             if cleaned_word in self.stopwords:
                 filtered_words_by_stopWords[cleaned_word] = filtered_words_by_stopWords.get(cleaned_word, 0) + 1
 
             # Přidat slova do hlavního počítadla
             filtered_words_sum[cleaned_word] = filtered_words_sum.get(cleaned_word, 0) + 1
 
-        print("StopWords words:")
+        print("\tStopWords words:")
         for word, count in filtered_words_by_stopWords.items():
-            print(f"{word}: {count}")
+            print(f"\t{word}: {count}")
 
         # print("Slova a kolikrát se vyskytla:")
         # Seřadí slova podle počtu opakování
@@ -52,12 +52,12 @@ class Processing:
         # Spočítání procenta
         percentage = (highest_count / total_characters) * 100
 
-        print(f"Slovo s nejvyšší četností: {most_frequent_word}")
-        print(f"Počet výskytů: {highest_count}")
-        print(f"Procentuální podíl na celkovém počtu znaků: {percentage:.2f}%")
+        print(f"\n\tSlovo s nejvyšší četností: {most_frequent_word}")
+        print(f"\tPočet výskytů: {highest_count}")
+        print(f"\tProcentuální podíl na celkovém počtu znaků: {percentage:.2f}%")
 
-        print("celkovy pocet slov:", len(self.data_text))
-        print("vyfiltrovany pocet slov:", len(filtered_words))
+        print("\tcelkovy pocet slov:", len(self.data_text))
+        print("\tvyfiltrovany pocet slov:", len(filtered_words))
 
     def run(self):
         self.split_and_filter()

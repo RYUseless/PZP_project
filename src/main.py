@@ -15,7 +15,7 @@ def run():
 
     # Výpočet a výpis doby běhu
     elapsed_time = end_time - start_time
-    print(f"Délka běhu programu: {elapsed_time:.2f} sekund")
+    print(f"\nDélka běhu programu: {elapsed_time:.2f} sekund")
 
 
 if __name__ == '__main__':

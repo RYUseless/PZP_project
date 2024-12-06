@@ -32,7 +32,6 @@ class Actions:
     def open_text_file(self):
         path_file = self.__find_resources_folder()
 
-        # Prochází soubory ve složce
         files_in_folder = os.listdir(path_file)
 
         # odkaz na proměnnou bez self, lebo ta se předává při setattr!
@@ -45,7 +44,6 @@ class Actions:
                 # print(f"Soubor {file_name} existuje.")
                 data_file_path = os.path.join(path_file, file_name)  # Plná cesta k souboru
 
-                # Otevření a načtení obsahu souboru
                 try:
                     with open(data_file_path, "r+", encoding="utf-8") as file:
                         content = file.read()
