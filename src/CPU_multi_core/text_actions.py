@@ -11,80 +11,73 @@ class Processing:
         self.datatxt_input, self.stopwords = Ryu_FA.Actions().get_text()
         self.filtered_words = []
 
-    @staticmethod
-    def _filter_word(word):  # oproti single core přesunut filtr do vlastní funkce
-        # Odfiltrování znaků co nejsou písmenka, odstranění teček před a za, pokus o odfiltraci i --
-        cleaned_word = re.sub(r"^[^\w'-]+|[^\w'-]+$", "", word)
+    def _filter_chunk(self, chunk):
+        filtered_words = []  # Lokální seznam pro každou část
+        for word in chunk:
+            # Odfiltrování znaků, co nejsou písmenka, odstranění teček před a za
+            cleaned_word = re.sub(r"^[^\w'-]+|[^\w'-]+$", "", word)
 
-        # Filtrace slov, které jsou menší než 4 charaktery a delší než 8 charakterů
-        if 4 <= len(cleaned_word) <= 8:
-            return cleaned_word
-        return None
+            # Filtrace slov, které jsou menší než 4 charaktery a delší než 8 charakterů
+            if 4 <= len(cleaned_word) <= 8:
+                # Pokud je slovo v seznamu stopwords, nebudeme ho přidávat
+                if cleaned_word.lower() not in self.stopwords:
+                    filtered_words.append(cleaned_word.lower())  # Přidáme slovo do výsledného seznamu ve formátu lower
+        return filtered_words  # Vracíme pouze lokální seznam
 
-    def _count_words(self, words):  # sčítání výskytu slov
-        # paradoxně bez tohoto jsem měl výsledky poměrně random
-        filtered_words_by_stopWords = {}
-        filtered_words_sum = {}
+    def split_and_filter(self):
+        num_processes = cpu_count()  # Počet procesorů
 
-        for word in words:
-            if word in self.stopwords:
-                filtered_words_by_stopWords[word] = filtered_words_by_stopWords.get(word, 0) + 1
-            filtered_words_sum[word] = filtered_words_sum.get(word, 0) + 1
-
-        return filtered_words_by_stopWords, filtered_words_sum
-
-    def split_and_filter(self):  # split and filter metoda → basically ta hlavní
-        num_processes = cpu_count()  # zjistí jádra cpučka
-
-        # vytvoření chunků pro jednotlivé vlákna
+        # Rozdělení dat do menších bloků pro paralelizaci
         chunk_size = len(self.datatxt_input) // num_processes
         chunks = [self.datatxt_input[i:i + chunk_size] for i in range(0, len(self.datatxt_input), chunk_size)]
 
-        # multithread power pro vyfiltrování slov:
+        # Použití více procesů pro filtrování slov
         with Pool(processes=num_processes) as pool:
-            filtered_results = pool.map(self._filter_word, self.datatxt_input)
+            filtered_results = pool.map(self._filter_chunk, chunks)
 
-        # vyfiltrovaná slova:
-        filtered_words = [word for word in filtered_results if word is not None]
+        # Spojení všech výsledků z jednotlivých chunků do jednoho seznamu
+        filtered_words = [word for chunk in filtered_results for word in chunk]
 
-        # multithread power pro spočítání počtu slov:
-        with Pool(processes=num_processes) as pool:
-            count_results = pool.map(self._count_words, chunks)
+        # Na konci přidáme všechny vyfiltrované slova do self.filtered_words
+        self.filtered_words = filtered_words
 
-        # Spojení výsledků do jedné kolekce
+        # Použití více vláken pro spočítání výskytů slov
         filtered_words_by_stopWords = {}
         filtered_words_sum = {}
 
-        for res in count_results:
-            stopwords, word_count = res
-            for word, count in stopwords.items():
-                filtered_words_by_stopWords[word] = filtered_words_by_stopWords.get(word, 0) + count
-            for word, count in word_count.items():
-                filtered_words_sum[word] = filtered_words_sum.get(word, 0) + count
+        for word in filtered_words:
+            filtered_words_sum[word] = filtered_words_sum.get(word, 0) + 1
 
         return filtered_words_by_stopWords, filtered_words_sum, filtered_words
 
-    def prints(self, filtered_words_by_stopWords, filtered_words_sum, filtered_words):  # výpis výsledku do konzole
+    def prints(self, filtered_words_by_stopWords, filtered_words_sum, filtered_words):
         print("\tStopWords words:")
         for word, count in filtered_words_by_stopWords.items():
             print(f"\t{word}: {count}")
 
-        # sort mechanismus podle formátu {slovo:počet} vyfiltruje nejčastější slova
-        # oproti single core mám zde ale jinak předávané hodnoty, takže co jsem já pochopil, musím i zde reverse order
-        sorted_items = sorted(filtered_words_sum.items(), key=itemgetter(1), reverse=True)
+        # Seřazení slov podle počtu výskytů
+        sorted_items = sorted(filtered_words_sum.items(), key=itemgetter(1))
+
+        result_list = []
+        for _ in range(5):
+            if not sorted_items:
+                break
+            most_frequent_word, highest_count = sorted_items[-1]  # poslední = nejčastější
+            result_list.append((most_frequent_word, highest_count))
+            sorted_items.pop()
 
         # Výpis nejčastějších slov
         print("\nPět nejčastěji se opakujících slov:")
         counter = 1
-        for word, count in sorted_items[:5]:
+        for word, count in result_list:
             percentil = round((count / len(self.datatxt_input)) * 100, 1)
-            print(f"\t{counter}. nejčastější slovo \"{word}\" odpovídá {percentil}% z celkových(nevyfiltrovaných) slov.")
+            print(f"\t{counter}. nejčastější slovo \"{word}\" odpovídá {percentil}% z celkového počtu slov.")
             counter += 1
 
         print("Input arr velikost:", len(self.datatxt_input))
         print("filtered arr velikost:", len(filtered_words))
 
-    def check_removed_stopwords(self):  # Export výsledků do souboru
+    def check_removed_stopwords(self):
         print("\nKontrola odstranění:")
         judgement_bool = False
         for word in self.filtered_words:
@@ -95,9 +88,7 @@ class Processing:
             print("\tDAYUUUUM Vskutku sukcesfulní práce!")
 
     def export_data(self, filtered_words_sum):
-        """ Export výsledků do souboru """
         filename = "sorted_words_multiThread.txt"
-        # reverse postup oproti sortu v prints, protože chci jako poslední zapsat největší číslo
         sorted_items = sorted(filtered_words_sum.items(), key=itemgetter(1), reverse=True)
 
         with open(filename, 'w') as file:

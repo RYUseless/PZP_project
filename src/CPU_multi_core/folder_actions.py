@@ -33,7 +33,7 @@ class Actions:
         """ Pomocná metoda pro čtení souborů """
         try:
             with open(file_path, "r+", encoding="utf-8") as file:
-                content = file.read().split()  # Split na jednotlivá slova
+                content = file.read().lower().split()  # Split na jednotlivá slova
             return content
         except Exception as e:
             print(f"Chyba při čtení souboru {file_path}: {e}")

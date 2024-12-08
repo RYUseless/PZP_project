@@ -47,7 +47,7 @@ class Actions:
                 try:
                     with open(data_file_path, "r+", encoding="utf-8") as file:
                         content = file.read()
-                        content = content.split()  # → rozdeli na slova, jinak by to parsovalo chary
+                        content = content.lower().split()  # → rozdeli na slova, jinak by to parsovalo chary
                 except Exception as e:
                     print(f"Došlo k chybě při čtení souboru: {e}")
                     continue  # Pokud nastane chyba, přeskočí se další krok

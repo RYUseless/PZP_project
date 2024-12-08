@@ -20,16 +20,19 @@ class Processing:
             cleaned_word = re.sub(r"^[^\w'-]+|[^\w'-]+$", "", word)
 
             # Filtrace slov, které jsou menší než 4 charaktery a delší než 8 charakterů
-            if 4 <= len(cleaned_word) <= 8:
-                self.filtered_words.append(cleaned_word)
+            if not (4 <= len(cleaned_word) <= 8):
+                continue
+            self.filtered_words.append(cleaned_word)  # uloží jen slova, která jsou mezi 4 a 8 char length
 
+            # stop words bullshit
             if cleaned_word in self.stopwords:
                 filtered_words_by_stopWords[cleaned_word] = filtered_words_by_stopWords.get(cleaned_word, 0) + 1
                 if cleaned_word in self.filtered_words:
                     self.filtered_words.remove(cleaned_word)
+                    continue
 
+            # sum big epic storage
             filtered_words_sum[cleaned_word] = filtered_words_sum.get(cleaned_word, 0) + 1
-
         return filtered_words_by_stopWords, filtered_words_sum
 
     def prints(self, filtered_words_by_stopWords, filtered_words_sum):
@@ -54,7 +57,7 @@ class Processing:
         for word, count in result_list:
             percentil = round((count / len(self.datatxt_input)) * 100, 1)
             print(
-                f"\t{counter}. nejčastější slovo \"{word}\" odpovídá {percentil}% z celkových(nevyfiltrovaných) slov.")
+                f"\t{counter}. nejčastější slovo \"{word}\" odpovídá {percentil}% z celkového počtu slov.")
             counter += 1
 
         print("Input arr veliksot:", len(self.datatxt_input))
