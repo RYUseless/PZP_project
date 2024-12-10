@@ -67,7 +67,6 @@ class Actions:
             thread.join()
 
     def get_text(self):
-        print(">> THREADING FOLDER ACTIONS")
         self.open_text_file()
         return self.data_file, self.stopword_file
 

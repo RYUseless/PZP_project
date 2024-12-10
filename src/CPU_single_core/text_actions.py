@@ -1,6 +1,7 @@
 import src.CPU_single_core.folder_actions as Ryu_FA
 import re
 from operator import itemgetter
+from collections import defaultdict
 import time
 
 
@@ -11,28 +12,31 @@ class Processing:
         self.filtered_words = []
 
     def split_and_filter(self):
-        filtered_words_by_stopWords = {}
-        filtered_words_sum = {}
-        print("\ndayum bro, ram goes away")
+        # defaultdict → automatické počítání!
+        filtered_words_by_stopWords = defaultdict(int)
+        filtered_words_sum = defaultdict(int)
 
-        for word in self.datatxt_input[:]:  # [:] → kopie
-            # odfiltrování znaků co nejsou písmenka, odstranění teček před a za, pokus o odfiltraci i --
-            cleaned_word = re.sub(r"^[^\w'-]+|[^\w'-]+$", "", word)
+        # regex precompile: odstranění white znaků, teček čárek atd
+        word_pattern = re.compile(r"^[^\w'-]+|[^\w'-]+$")
+        dash_pattern = re.compile(r"^--+|--+$")
 
-            # Filtrace slov, které jsou menší než 4 charaktery a delší než 8 charakterů
+        for word in self.datatxt_input:
+            cleaned_word = word_pattern.sub("", word)
+            cleaned_word = dash_pattern.sub("", cleaned_word)
+
             if not (4 <= len(cleaned_word) <= 8):
                 continue
-            self.filtered_words.append(cleaned_word)  # uloží jen slova, která jsou mezi 4 a 8 char length
 
-            # stop words bullshit
+            # Filtrace stop slov podle stop words, pokud shoda, skipne se for loop a jde se na další slovo (aka neuloží se toto slov do filtrovaných slov)
             if cleaned_word in self.stopwords:
-                filtered_words_by_stopWords[cleaned_word] = filtered_words_by_stopWords.get(cleaned_word, 0) + 1
-                if cleaned_word in self.filtered_words:
-                    self.filtered_words.remove(cleaned_word)
-                    continue
+                filtered_words_by_stopWords[cleaned_word] += 1
+                continue  # skip in question
 
-            # sum big epic storage
-            filtered_words_sum[cleaned_word] = filtered_words_sum.get(cleaned_word, 0) + 1
+            self.filtered_words.append(cleaned_word)
+
+            # Počítání výskytů všech slov
+            filtered_words_sum[cleaned_word] += 1
+
         return filtered_words_by_stopWords, filtered_words_sum
 
     def prints(self, filtered_words_by_stopWords, filtered_words_sum):
@@ -60,15 +64,16 @@ class Processing:
                 f"\t{counter}. nejčastější slovo \"{word}\" odpovídá {percentil}% z celkového počtu slov.")
             counter += 1
 
-        print("Input arr veliksot:", len(self.datatxt_input))
-        print("filtered arr velikost:", len(self.filtered_words))
+        print("\n Staty k filtraci slov na jeden run:")
+        print("\t Vstupní počet slov:", len(self.datatxt_input))
+        print("\t Výstupní (vyfiltrovaný) počet slov:", len(self.filtered_words))
 
     def check_removed_stopwords(self):
-        print("\nkontrola odstraneni:")
+        print("\nKontrola, zda-li se ve vyfiltrovaném seznamu slov nachází slova z stop_words.txr:")
         judgement_bool = False
         for word in self.filtered_words:
             if word in self.stopwords:
-                print("AJAJAJAJAJ SLOVO NEBYLO ODSTRANENO")
+                print(f"CHYBA, SLOVO {word} JE STÁLE PŘÍTOMNO!!!")
                 judgement_bool = True
         # dayum, judgement time!
         if not judgement_bool:
@@ -91,13 +96,13 @@ class Processing:
         print(f"Výsledky byly zapsány do souboru: {filename}")
 
     def run(self):
+        print("\n>> STARTING SINGLE CORE -----------------------------------------------------------------------------")
         start_time = time.time()
-
         stop_words, filtered_words = self.split_and_filter()
+        self.export_data(filtered_words)
+        end_time = time.time()
+
         self.prints(stop_words, filtered_words)
         self.check_removed_stopwords()
-        self.export_data(filtered_words)
-        print("Finished single thread file filtering etc.")
-
-        end_time = time.time()  # Konec měření času
+        print("\n>> ENDING SINGLE CORE -------------------------------------------------------------------------------")
         return end_time - start_time
